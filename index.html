@@ -864,7 +864,29 @@
 
 </div><!-- /app-shell -->
 
-<script>
+<script type="module">
+// FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDheakYnU-faSmvjjIzL_RrNjhuQ0wYhVg",
+  authDomain: "viagem-canoa.firebaseapp.com",
+  projectId: "viagem-canoa",
+  storageBucket: "viagem-canoa.firebasestorage.app",
+  messagingSenderId: "823658121194",
+  appId: "1:823658121194:web:6a1a0bfd6bcd649ad65493"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 // ===================== STATE =====================
 let people = [
   { id: 1, name: 'Você' },
@@ -1293,13 +1315,86 @@ function setTxt(id, val) {
 }
 
 function renderAll() {
+
+  salvarDados();
+
   renderPeople();
   renderCategories();
   renderIndExpenses();
   calcular();
 }
 
-renderAll();
+// ===================== FIREBASE SAVE =====================
+
+async function salvarDados() {
+
+  const dados = {
+    people,
+    categories,
+    indExpenses,
+    nextPersonId,
+    nextCatId,
+    nextIndId,
+    tripName: document.getElementById('tripName').value
+  };
+
+  try {
+
+    await setDoc(doc(db, "viagens", "canoa"), dados);
+
+    console.log("Dados salvos!");
+
+  } catch (e) {
+
+    console.error("Erro ao salvar:", e);
+
+  }
+
+}
+
+async function carregarDados() {
+
+  try {
+
+    const docRef = doc(db, "viagens", "canoa");
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+
+      const dados = docSnap.data();
+
+      people = dados.people || [];
+      categories = dados.categories || [];
+      indExpenses = dados.indExpenses || [];
+
+      nextPersonId = dados.nextPersonId || 1;
+      nextCatId = dados.nextCatId || 1;
+      nextIndId = dados.nextIndId || 1;
+
+      document.getElementById('tripName').value =
+        dados.tripName || 'Viagem com os amigos';
+
+    }
+
+    renderPeople();
+    renderCategories();
+    renderIndExpenses();
+    calcular();
+
+  } catch (e) {
+
+    console.error("Erro ao carregar:", e);
+
+    renderPeople();
+    renderCategories();
+    renderIndExpenses();
+    calcular();
+
+  }
+
+}
+
+carregarDados();
 </script>
 </body>
 </html>
