@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TripSplit</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface2: #f0f0ec;
+    --border: #e4e4e0;
+    --border-strong: #c8c8c4;
+    --accent: #c8a050;
+    --accent2: #d46060;
+    --accent3: #3a9e98;
+    --accent4: #7a6ec0;
+    --text: #1a1a18;
+    --text-muted: #8a8a84;
+    --text-light: #b0b0aa;
+    --success: #3a9e74;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Geist', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== LAYOUT MOBILE ===== */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 430px;
+    margin: 0 auto;
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 12px;
+    flex-shrink: 0;
+  }
+
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .logo em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .trip-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+
+  .trip-chip-icon { font-size: 0.85rem; }
+
+  .trip-name-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    outline: none;
+    width: 130px;
+  }
+
+  .trip-name-input::placeholder { color: var(--text-muted); }
+
+  /* ===== SCROLL AREA ===== */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px 24px;
+  }
+
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    flex-shrink: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-btn .nav-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: transform 0.15s;
+  }
+
+  .nav-btn .nav-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-light);
+    transition: color 0.15s;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  .nav-btn.active .nav-label { color: var(--text); }
+  .nav-btn.active .nav-icon { transform: scale(1.1); }
+
+  .nav-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .nav-btn { position: relative; }
+  .nav-btn.active .nav-indicator { opacity: 1; }
+
+  /* ===== SECTION ===== */
+  .section { display: none; }
+  .section.active { display: block; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ===== CARD ===== */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .card-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .card-body { padding: 16px; }
+
+  /* ===== STAT BLOCK ===== */
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .stat-block {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .stat-val {
+    font-family: 'Geist Mono', monospace;
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 3px;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* ===== PEOPLE ===== */
+  .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+  .person-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+
+  .person-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  .person-name {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 400;
+    outline: none;
+    min-width: 0;
+  }
+
+  .person-name::placeholder { color: var(--text-light); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Geist', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-primary {
+    background: var(--text);
+    color: var(--surface);
+    width: 100%;
+  }
+
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    width: 100%;
+  }
+
+  .btn-ghost:active { background: var(--surface2); }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-remove:active { color: var(--accent2); background: rgba(212,96,96,0.08); }
+
+  /* ===== EXPENSE ROW ===== */
+  .expense-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .expense-row:last-child { border-bottom: none; }
+
+  .expense-row-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .expense-icon {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .expense-label { flex: 1; font-size: 0.88rem; font-weight: 500; }
+
+  .expense-row-bottom {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 10px;
+  }
+
+  .input-wrap:focus-within { border-color: var(--border-strong); }
+
+  .currency-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .expense-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 9px 4px;
+    width: 100%;
+    outline: none;
+    text-align: right;
+  }
+
+  .expense-input::placeholder { color: var(--text-light); }
+
+  .parcelas-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .parcelas-label { font-size: 0.72rem; color: var(--text-muted); }
+
+  .parcelas-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.82rem;
+    padding: 7px 8px;
+    width: 50px;
+    outline: none;
+    text-align: center;
+  }
+
+  /* ===== IND EXPENSES ===== */
+  .ind-expense-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.2s ease;
+  }
+
+  .ind-expense-row:last-child { border-bottom: none; }
+
+  .ind-row-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .ind-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 400;
+    outline: none;
+    width: 100%;
+    padding: 0;
+  }
+
+  .ind-input::placeholder { color: var(--text-light); }
+
+  .ind-row-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .select-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a84' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* ===== RESULTS TABLE — mobile scroll ===== */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 380px;
+  }
+
+  .result-table th {
+    text-align: left;
+    font-size: 0.67rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .result-table td {
+    padding: 10px 10px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .result-table tr:last-child td { border-bottom: none; }
+  .result-table tbody tr:active td { background: var(--surface2); }
+
+  .mono { font-family: 'Geist Mono', monospace; }
+  .highlight-val { font-family: 'Geist Mono', monospace; font-weight: 500; color: var(--accent); }
+  .highlight-val2 { font-family: 'Geist Mono', monospace; font-weight: 500; color: var(--accent3); }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  .tag-green { background: rgba(58,158,116,0.1); color: var(--success); }
+  .tag-red { background: rgba(212,96,96,0.1); color: var(--accent2); }
+  .tag-yellow { background: rgba(200,160,80,0.1); color: var(--accent); }
+
+  /* ===== PROGRESS BAR ===== */
+  .prog-wrap { margin-top: 12px; }
+  .prog-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+  .prog-bar { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
+  /* ===== DIVIDER ===== */
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* ===== EMPTY ===== */
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .empty-state .empty-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+
+  /* ===== SALDO COLLAPSIBLE ===== */
+  .saldo-person-block {
+    border-bottom: 1px solid var(--border);
+  }
+  .saldo-person-block:last-child { border-bottom: none; }
+
+  .saldo-person-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .saldo-person-header:active { background: var(--surface2); }
+
+  .saldo-header-info { flex: 1; min-width: 0; }
+  .saldo-header-name { font-size: 0.88rem; font-weight: 500; }
+  .saldo-header-sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 1px; }
+
+  .saldo-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .saldo-chevron {
+    font-size: 0.65rem;
+    color: var(--text-light);
+    transition: transform 0.2s ease;
+    line-height: 1;
+  }
+  .saldo-person-block.open .saldo-chevron { transform: rotate(180deg); }
+
+  .saldo-transfers {
+    display: none;
+    padding: 0 16px 14px 16px;
+    background: var(--surface2);
+  }
+  .saldo-person-block.open .saldo-transfers { display: block; }
+
+  .transfer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+  .transfer-row:last-child { border-bottom: none; }
+
+  .transfer-arrow { color: var(--text-light); font-size: 0.75rem; flex-shrink: 0; }
+  .transfer-amount { font-family: 'Geist Mono', monospace; font-weight: 500; color: var(--accent2); margin-left: auto; flex-shrink: 0; }
+  .transfer-amount.receive { color: var(--success); }
+
+  .no-transfers {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding: 8px 0;
+    text-align: center;
+  }
+
+  /* ===== INFO TEXT ===== */
+  .info { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
+
+  /* ===== SECTION TITLE ===== */
+  .section-title {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  /* ===== CATEGORY NOTES ===== */
+  .btn-note {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .btn-note:active { background: var(--surface2); }
+  .btn-note.has-note { color: var(--accent4); }
+
+  .cat-note-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.22s ease;
+  }
+  .cat-note-panel.open { max-height: 200px; }
+
+  .cat-note-inner {
+    padding: 8px 0 4px;
+  }
+
+  .cat-note-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    padding: 9px 12px;
+    outline: none;
+    resize: none;
+    min-height: 60px;
+    transition: border-color 0.15s;
+  }
+  .cat-note-input:focus { border-color: var(--border-strong); }
+  .cat-note-input::placeholder { color: var(--text-light); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">Trip<em>Split</em> ✈️</div>
+      <div class="trip-chip">
+        <span class="trip-chip-icon">📍</span>
+        <input class="trip-name-input" id="tripName" type="text" placeholder="Nome da viagem..." value="Viagem com os amigos">
+      </div>
+    </div>
+  </div>
+
+  <!-- SCROLL CONTENT -->
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- ==================== ABA PESSOAS ==================== -->
+    <div id="tab-pessoas" class="section active">
+
+      <div class="stat-row">
+        <div class="stat-block">
+          <div class="stat-val" id="quick-pessoas">0</div>
+          <div class="stat-label">pessoas</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val mono" id="quick-total" style="color:var(--accent)">R$ 0</div>
+          <div class="stat-label">total estimado</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-block" style="grid-column: span 2">
+          <div class="stat-val mono" id="quick-porpessoa" style="color:var(--accent3)">R$ 0,00</div>
+          <div class="stat-label">por pessoa</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-dot" style="background:var(--accent4)"></span>
+            Participantes
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="people-list" id="peopleList"></div>
+          <button class="btn btn-primary" onclick="addPerson()">＋ Adicionar Pessoa</button>
+          <p class="info">Os nomes são usados nos cálculos e divisões.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ABA DESPESAS GERAIS ==================== -->
+    <div id="tab-despesas" class="section">
+
+      <div class="stat-row">
+        <div class="stat-block">
+          <div class="stat-val mono" id="totalGeral" style="color:var(--accent)">R$ 0,00</div>
+          <div class="stat-label">total geral</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val mono" id="valorPorPessoa" style="color:var(--accent3)">R$ 0,00</div>
+          <div class="stat-label">por pessoa</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-block" style="grid-column: span 2">
+          <div class="stat-val mono" id="parcelaMensal" style="color:var(--accent4)">R$ 0,00</div>
+          <div class="stat-label">parcela mensal estimada por pessoa</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-dot" style="background:var(--accent2)"></span>
+            Categorias
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="expenseList"></div>
+          <div class="prog-wrap" id="catProgress"></div>
+          <div class="divider"></div>
+          <button class="btn btn-ghost" onclick="addCategory()">＋ Nova Categoria</button>
+          <p class="info">Use × para definir parcelas de cada categoria.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ABA GASTOS INDIVIDUAIS ==================== -->
+    <div id="tab-individual" class="section">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-dot" style="background:var(--accent3)"></span>
+            Gastos Extras
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="info" style="margin-top:0;margin-bottom:14px">Gastos pagos por uma pessoa e divididos entre todos.</p>
+          <div id="indExpenseList">
+            <div class="empty-state" id="indEmpty">
+              <span class="empty-icon">🧾</span>
+              Adicione pessoas primeiro!
+            </div>
+          </div>
+          <div class="divider"></div>
+          <button class="btn btn-primary" onclick="addIndExpense()">＋ Adicionar Gasto</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-dot" style="background:var(--accent4)"></span>
+            Saldo por Pessoa
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div id="saldoTable">
+            <div class="empty-state">
+              <span class="empty-icon">⚖️</span>
+              Os saldos aparecerão aqui
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ABA RESUMO ==================== -->
+    <div id="tab-resumo" class="section">
+
+      <div class="stat-row">
+        <div class="stat-block">
+          <div class="stat-val mono" id="res-total">R$ 0,00</div>
+          <div class="stat-label">custo total</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val mono" id="res-porpessoa" style="color:var(--accent3)">R$ 0,00</div>
+          <div class="stat-label" id="res-npessoas">0 pessoas</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-block" style="grid-column: span 2">
+          <div class="stat-val mono" id="res-parcela" style="color:var(--accent4)">R$ 0,00</div>
+          <div class="stat-label" id="res-nparcelas">parcela mensal estimada</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-dot" style="background:var(--accent2)"></span>
+            Detalhamento
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-scroll">
+            <div id="resumoTable">
+              <div class="empty-state">
+                <span class="empty-icon">📊</span>
+                Adicione pessoas e despesas para ver o resumo
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scroll-area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('pessoas', this)">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Pessoas</span>
+      <span class="nav-indicator"></span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('despesas', this)">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Despesas</span>
+      <span class="nav-indicator"></span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('individual', this)">
+      <span class="nav-icon">🧾</span>
+      <span class="nav-label">Individuais</span>
+      <span class="nav-indicator"></span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('resumo', this)">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Resumo</span>
+      <span class="nav-indicator"></span>
+    </button>
+  </nav>
+
+</div><!-- /app-shell -->
+
+<script>
+// ===================== STATE =====================
+let people = [
+  { id: 1, name: 'Você' },
+  { id: 2, name: 'Amigo 1' },
+  { id: 3, name: 'Amigo 2' },
+];
+let nextPersonId = 4;
+
+const COLORS = ['#d4a060','#4ecdc4','#a78bfa','#ff8080','#34d399','#f97316','#60a5fa','#e879f9'];
+
+let categories = [
+  { id: 1, icon: '🏨', label: 'Hospedagem',       color: '#d4a060', value: 0, parcelas: 1, note: '' },
+  { id: 2, icon: '🚗', label: 'Aluguel de Carro',  color: '#4ecdc4', value: 0, parcelas: 1, note: '' },
+  { id: 3, icon: '✈️', label: 'Passagens',         color: '#a78bfa', value: 0, parcelas: 1, note: '' },
+  { id: 4, icon: '🍽️', label: 'Alimentação',      color: '#ff8080', value: 0, parcelas: 1, note: '' },
+  { id: 5, icon: '🎢', label: 'Passeios',          color: '#34d399', value: 0, parcelas: 1, note: '' },
+  { id: 6, icon: '🛍️', label: 'Compras',           color: '#f97316', value: 0, parcelas: 1, note: '' },
+];
+let nextCatId = 7;
+
+let indExpenses = [];
+let nextIndId = 1;
+
+// ===================== TABS =====================
+function switchTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  document.getElementById('scrollArea').scrollTop = 0;
+  renderAll();
+}
+
+// ===================== PEOPLE =====================
+function renderPeople() {
+  const list = document.getElementById('peopleList');
+  list.innerHTML = '';
+  people.forEach((p, i) => {
+    const color = COLORS[i % COLORS.length];
+    const initials = p.name.trim() ? p.name.trim()[0].toUpperCase() : '?';
+    const row = document.createElement('div');
+    row.className = 'person-row';
+    row.innerHTML = `
+      <div class="person-avatar" style="background:${color}">${initials}</div>
+      <input class="person-name" type="text" value="${p.name}" placeholder="Nome..."
+             oninput="people[${i}].name=this.value; calcular()">
+      <button class="btn-remove" onclick="removePerson(${p.id})">✕</button>
+    `;
+    list.appendChild(row);
+  });
+  document.getElementById('quick-pessoas').textContent = people.length;
+}
+
+function addPerson() {
+  people.push({ id: nextPersonId++, name: `Pessoa ${people.length + 1}` });
+  renderAll();
+}
+
+function removePerson(id) {
+  if (people.length <= 1) return alert('A viagem precisa de pelo menos 1 pessoa!');
+  people = people.filter(p => p.id !== id);
+  renderAll();
+}
+
+// ===================== CATEGORIES =====================
+function renderCategories() {
+  const list = document.getElementById('expenseList');
+  list.innerHTML = '';
+  categories.forEach((cat, i) => {
+    const row = document.createElement('div');
+    row.className = 'expense-row';
+    const hasNote = cat.note && cat.note.trim().length > 0;
+    row.innerHTML = `
+      <div class="expense-row-top">
+        <div class="expense-icon" style="background:${cat.color}18">${cat.icon}</div>
+        <div class="expense-label">${cat.label}</div>
+        <button class="btn-note ${hasNote ? 'has-note' : ''}" title="Anotações"
+                onclick="toggleCatNote('cat-note-${cat.id}', this)">✎</button>
+        <button class="btn-remove" onclick="removeCategory(${cat.id})">✕</button>
+      </div>
+      <div class="expense-row-bottom">
+        <div class="input-wrap">
+          <span class="currency-label">R$</span>
+          <input class="expense-input" type="number" min="0" step="0.01" placeholder="0,00"
+                 value="${cat.value || ''}"
+                 oninput="categories[${i}].value=parseFloat(this.value)||0; calcular()"
+                 inputmode="decimal">
+        </div>
+        <div class="parcelas-wrap">
+          <span class="parcelas-label">×</span>
+          <input class="parcelas-input" type="number" min="1" max="60" value="${cat.parcelas}"
+                 title="Parcelas"
+                 oninput="categories[${i}].parcelas=parseInt(this.value)||1; calcular()"
+                 inputmode="numeric">
+        </div>
+      </div>
+      <div class="cat-note-panel" id="cat-note-${cat.id}">
+        <div class="cat-note-inner">
+          <textarea class="cat-note-input" placeholder="Adicionar observação..."
+                    oninput="updateCatNote(${cat.id}, this.value, this)">${cat.note || ''}</textarea>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function toggleCatNote(panelId, btn) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    panel.querySelector('textarea').focus();
+  }
+}
+
+function updateCatNote(id, value, textarea) {
+  const cat = categories.find(c => c.id === id);
+  if (!cat) return;
+  cat.note = value;
+  // Atualiza icone do botao sem re-renderizar
+  const btn = textarea.closest('.expense-row').querySelector('.btn-note');
+  if (btn) btn.classList.toggle('has-note', value.trim().length > 0);
+}
+
+function addCategory() {
+  const label = prompt('Nome da nova categoria:', 'Outro');
+  if (!label) return;
+  const icons = ['💡','🎵','⛽','🏖️','🎭','🚢','🧳','💊'];
+  const icon = icons[Math.floor(Math.random() * icons.length)];
+  const color = COLORS[nextCatId % COLORS.length];
+  categories.push({ id: nextCatId++, icon, label, color, value: 0, parcelas: 1, note: '' });
+  renderAll();
+}
+
+function removeCategory(id) {
+  categories = categories.filter(c => c.id !== id);
+  renderAll();
+}
+
+// ===================== INDIVIDUAL EXPENSES =====================
+function renderIndExpenses() {
+  const list = document.getElementById('indExpenseList');
+
+  if (people.length === 0) {
+    list.innerHTML = '<div class="empty-state"><span class="empty-icon">🧾</span>Adicione pessoas primeiro!</div>';
+    return;
+  }
+
+  const rows = indExpenses.map((exp, i) => {
+    const opts = people.map(p =>
+      `<option value="${p.id}" ${exp.personId === p.id ? 'selected' : ''}>${p.name}</option>`
+    ).join('');
+    return `
+      <div class="ind-expense-row">
+        <div class="ind-row-top">
+          <input class="ind-input" type="text" placeholder="Descrição do gasto..."
+                 value="${exp.desc}"
+                 oninput="indExpenses[${i}].desc=this.value; calcularSaldo()">
+          <button class="btn-remove" onclick="removeIndExpense(${exp.id})">✕</button>
+        </div>
+        <div class="ind-row-bottom">
+          <div class="input-wrap">
+            <span class="currency-label">R$</span>
+            <input class="ind-input expense-input" type="number" min="0" step="0.01"
+                   placeholder="0,00" value="${exp.value||''}"
+                   oninput="indExpenses[${i}].value=parseFloat(this.value)||0; calcularSaldo()"
+                   inputmode="decimal">
+          </div>
+          <select class="select-input"
+                  onchange="indExpenses[${i}].personId=parseInt(this.value); calcularSaldo()">
+            ${opts}
+          </select>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = rows || '<div class="empty-state"><span class="empty-icon">🧾</span>Nenhum gasto individual ainda.</div>';
+}
+
+function addIndExpense() {
+  if (people.length === 0) return alert('Adicione pessoas primeiro!');
+  indExpenses.push({ id: nextIndId++, desc: '', value: 0, personId: people[0].id });
+  renderAll();
+}
+
+function removeIndExpense(id) {
+  indExpenses = indExpenses.filter(e => e.id !== id);
+  renderAll();
+}
+
+function calcularSaldo() {
+  const n = people.length;
+  if (n === 0) return;
+
+  // 1. Calcular saldo líquido de cada pessoa
+  const saldo = {};
+  people.forEach(p => saldo[p.id] = 0);
+  indExpenses.forEach(exp => {
+    const val = exp.value || 0;
+    const share = val / n;
+    saldo[exp.personId] += val;
+    people.forEach(p => saldo[p.id] -= share);
+  });
+
+  const tableEl = document.getElementById('saldoTable');
+
+  if (indExpenses.length === 0) {
+    tableEl.innerHTML = '<div class="empty-state"><span class="empty-icon">⚖️</span>Adicione gastos para ver os saldos.</div>';
+    return;
+  }
+
+  // 2. Divida bruta por gasto: debt[devedor][credor]
+  const debt = {};
+  people.forEach(p => { debt[p.id] = {}; people.forEach(q => debt[p.id][q.id] = 0); });
+
+  indExpenses.forEach(exp => {
+    const val = exp.value || 0;
+    if (val <= 0) return;
+    const share = val / n;
+    people.forEach(p => {
+      if (p.id !== exp.personId) {
+        debt[p.id][exp.personId] += share;
+      }
+    });
+  });
+
+  // 3. Netear dividas bilaterais entre cada par
+  const netDebt = {};
+  people.forEach(p => { netDebt[p.id] = {}; people.forEach(q => netDebt[p.id][q.id] = 0); });
+
+  people.forEach((p, i) => {
+    people.forEach((q, j) => {
+      if (i >= j) return;
+      const pOwesQ = debt[p.id][q.id];
+      const qOwesP = debt[q.id][p.id];
+      if (pOwesQ - qOwesP > 0.005) {
+        netDebt[p.id][q.id] = pOwesQ - qOwesP;
+      } else if (qOwesP - pOwesQ > 0.005) {
+        netDebt[q.id][p.id] = qOwesP - pOwesQ;
+      }
+    });
+  });
+
+  // 4. Renderizar blocos retratieis por pessoa
+  let html = '';
+  people.forEach((p, idx) => {
+    const color    = COLORS[idx % COLORS.length];
+    const initials = p.name.trim() ? p.name.trim()[0].toUpperCase() : '?';
+    const pagou    = indExpenses.filter(e => e.personId === p.id).reduce((a, b) => a + (b.value || 0), 0);
+    const s = saldo[p.id];
+
+    const tagClass   = s >  0.005 ? 'tag-green'      : s < -0.005 ? 'tag-red'      : 'tag-yellow';
+    const tagLabel   = s >  0.005 ? 'a receber'      : s < -0.005 ? 'a pagar'      : 'quitado';
+    const saldoColor = s >  0.005 ? 'var(--success)' : s < -0.005 ? 'var(--accent2)' : 'var(--text-muted)';
+    const saldoTxt   = (s >= 0 ? '+' : '') + fmt(Math.abs(s));
+
+    const owes = people
+      .filter(q => q.id !== p.id && netDebt[p.id][q.id] > 0.005)
+      .map(q => ({ person: q, amount: netDebt[p.id][q.id] }));
+
+    const receives = people
+      .filter(q => q.id !== p.id && netDebt[q.id][p.id] > 0.005)
+      .map(q => ({ person: q, amount: netDebt[q.id][p.id] }));
+
+    let detalhes = '';
+    if (owes.length === 0 && receives.length === 0) {
+      detalhes = '<div class="no-transfers">✅ Nada a pagar nem a receber</div>';
+    } else {
+      owes.forEach(({ person: dest, amount }) => {
+        const dIdx   = people.indexOf(dest);
+        const dColor = COLORS[dIdx % COLORS.length];
+        const dInit  = dest.name.trim() ? dest.name.trim()[0].toUpperCase() : '?';
+        detalhes += `
+          <div class="transfer-row">
+            <span class="transfer-arrow">↗</span>
+            <div class="person-avatar" style="background:${dColor};width:22px;height:22px;font-size:0.62rem;flex-shrink:0">${dInit}</div>
+            <span style="flex:1;font-size:0.83rem">Pagar para <strong>${dest.name}</strong></span>
+            <span class="transfer-amount">${fmt(amount)}</span>
+          </div>`;
+      });
+      receives.forEach(({ person: orig, amount }) => {
+        const oIdx   = people.indexOf(orig);
+        const oColor = COLORS[oIdx % COLORS.length];
+        const oInit  = orig.name.trim() ? orig.name.trim()[0].toUpperCase() : '?';
+        detalhes += `
+          <div class="transfer-row">
+            <span class="transfer-arrow" style="color:var(--success)">↙</span>
+            <div class="person-avatar" style="background:${oColor};width:22px;height:22px;font-size:0.62rem;flex-shrink:0">${oInit}</div>
+            <span style="flex:1;font-size:0.83rem">Receber de <strong>${orig.name}</strong></span>
+            <span class="transfer-amount receive">${fmt(amount)}</span>
+          </div>`;
+      });
+    }
+
+    html += `
+      <div class="saldo-person-block" id="saldo-block-${p.id}">
+        <div class="saldo-person-header" onclick="toggleSaldoBlock(${p.id})">
+          <div class="person-avatar" style="background:${color};width:30px;height:30px;font-size:0.78rem;flex-shrink:0">${initials}</div>
+          <div class="saldo-header-info">
+            <div class="saldo-header-name">${p.name}</div>
+            <div class="saldo-header-sub">pagou ${fmt(pagou)}</div>
+          </div>
+          <div class="saldo-header-right">
+            <div style="text-align:right">
+              <div style="font-family:'Geist Mono',monospace;font-size:0.85rem;font-weight:500;color:${saldoColor}">${saldoTxt}</div>
+              <span class="tag ${tagClass}" style="margin-top:2px;display:inline-block">${tagLabel}</span>
+            </div>
+            <span class="saldo-chevron">▼</span>
+          </div>
+        </div>
+        <div class="saldo-transfers" id="saldo-block-${p.id}-body">
+          ${detalhes}
+        </div>
+      </div>`;
+  });
+
+  tableEl.innerHTML = html;
+
+  if (window._saldoOpenIds) {
+    window._saldoOpenIds.forEach(id => {
+      const block = document.getElementById('saldo-block-' + id);
+      if (block) block.classList.add('open');
+    });
+  }
+}
+
+function toggleSaldoBlock(id) {
+  const block = document.getElementById('saldo-block-' + id);
+  if (!block) return;
+  block.classList.toggle('open');
+  window._saldoOpenIds = [...document.querySelectorAll('.saldo-person-block.open')]
+    .map(el => el.id.replace('saldo-block-', ''));
+}
+
+// ===================== CALCULAR =====================
+function calcular() {
+  const n = people.length || 1;
+  const totalCat = categories.reduce((a, b) => a + (b.value || 0), 0);
+  const totalInd = indExpenses.reduce((a, b) => a + (b.value || 0), 0);
+  const total = totalCat + totalInd;
+  const porPessoa = total / n;
+  const parcelaPonderada = categories.reduce((a, cat) => a + (cat.value || 0) / cat.parcelas, 0) / n;
+
+  setTxt('totalGeral', fmt(totalCat));
+  setTxt('valorPorPessoa', fmt(porPessoa));
+  setTxt('parcelaMensal', fmt(parcelaPonderada));
+  setTxt('quick-total', fmt(total));
+  setTxt('quick-porpessoa', fmt(porPessoa));
+  setTxt('quick-pessoas', people.length);
+
+  const prog = document.getElementById('catProgress');
+  if (prog && totalCat > 0) {
+    prog.innerHTML = categories.filter(c => c.value > 0).map(c => `
+      <div class="prog-wrap">
+        <div class="prog-label"><span>${c.icon} ${c.label}</span><span>${fmt(c.value)} (${Math.round(c.value/totalCat*100)}%)</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${c.value/totalCat*100}%;background:${c.color}"></div></div>
+      </div>
+    `).join('');
+  } else if (prog) {
+    prog.innerHTML = '';
+  }
+
+  setTxt('res-total', fmt(total));
+  setTxt('res-porpessoa', fmt(porPessoa));
+  setTxt('res-npessoas', people.length + ' pessoa' + (people.length !== 1 ? 's' : ''));
+  setTxt('res-parcela', fmt(parcelaPonderada));
+  setTxt('res-nparcelas', 'parcela mensal estimada');
+
+  renderResumoTable(porPessoa, parcelaPonderada, totalCat, totalInd, n);
+  calcularSaldo();
+}
+
+function renderResumoTable(porPessoa, parcela, totalCat, totalInd, n) {
+  const el = document.getElementById('resumoTable');
+  if (!el) return;
+  if (people.length === 0) {
+    el.innerHTML = '<div class="empty-state"><span class="empty-icon">📊</span>Adicione pessoas para ver o resumo.</div>';
+    return;
+  }
+
+  let html = `<div class="table-scroll"><table class="result-table">
+    <thead><tr>
+      <th>Pessoa</th>
+      <th>Despesas gerais</th>
+      <th>Extras</th>
+      <th>Total por pessoa</th>
+    </tr></thead><tbody>`;
+
+  people.forEach((p, i) => {
+    const color = COLORS[i % COLORS.length];
+    const initials = p.name.trim() ? p.name.trim()[0].toUpperCase() : '?';
+    const quotaGeral = totalCat / n;
+    const quotaInd   = totalInd / n;
+
+    html += `<tr>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <div class="person-avatar" style="background:${color};width:24px;height:24px;font-size:0.68rem">${initials}</div>
+        <strong>${p.name}</strong>
+      </div></td>
+      <td class="highlight-val">${fmt(quotaGeral)}</td>
+      <td class="mono">${fmt(quotaInd)}</td>
+      <td class="highlight-val2">${fmt(porPessoa)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody><tfoot><tr>
+    <td><strong>Total geral</strong></td>
+    <td class="mono"><strong>${fmt(totalCat)}</strong></td>
+    <td class="mono"><strong>${fmt(totalInd)}</strong></td>
+    <td class="mono"><strong>${fmt(porPessoa * n)}</strong></td>
+  </tr></tfoot></table></div>
+  <p class="info" style="padding:12px 14px 14px">O acerto de quem deve pagar para quem está na aba <strong>Individuais ↙</strong></p>`;
+  el.innerHTML = html;
+}
+
+// ===================== HELPERS =====================
+function fmt(v) {
+  return 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function setTxt(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function renderAll() {
+  renderPeople();
+  renderCategories();
+  renderIndExpenses();
+  calcular();
+}
+
+renderAll();
+</script>
+</body>
+</html>
