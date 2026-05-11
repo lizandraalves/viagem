@@ -98,6 +98,55 @@
 
   .trip-name-input::placeholder { color: var(--text-muted); }
 
+  /* ===== SYNC INDICATOR ===== */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  }
+
+  .sync-bar.syncing {
+    background: rgba(58, 158, 152, 0.1);
+    color: var(--accent3);
+  }
+
+  .sync-bar.saved {
+    background: rgba(58, 158, 116, 0.1);
+    color: var(--success);
+  }
+
+  .sync-bar.error {
+    background: rgba(212, 96, 96, 0.1);
+    color: var(--accent2);
+  }
+
+  .sync-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--text-light);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .sync-bar.syncing .sync-spinner {
+    border-color: var(--accent3);
+    border-top-color: transparent;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   /* ===== SCROLL AREA ===== */
   .scroll-area {
     flex: 1;
@@ -677,6 +726,12 @@
     </div>
   </div>
 
+  <!-- SYNC BAR -->
+  <div class="sync-bar" id="syncBar">
+    <div class="sync-spinner" id="syncSpinner" style="display:none"></div>
+    <span id="syncText">☁️ Conectando ao Firebase...</span>
+  </div>
+
   <!-- SCROLL CONTENT -->
   <div class="scroll-area" id="scrollArea">
 
@@ -711,7 +766,7 @@
         <div class="card-body">
           <div class="people-list" id="peopleList"></div>
           <button class="btn btn-primary" onclick="addPerson()">＋ Adicionar Pessoa</button>
-          <p class="info">Os nomes são usados nos cálculos e divisões.</p>
+          <p class="info">Os nomes são usados nos cálculos e divisões. Os dados são salvos automaticamente na nuvem ☁️</p>
         </div>
       </div>
     </div>
@@ -864,6 +919,121 @@
 
 </div><!-- /app-shell -->
 
+<!-- ===================== FIREBASE ===================== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBzuwd-JaJ44st9M_5nFORJjWeyPYmFSRA",
+    authDomain: "viagem-canoa-59969.firebaseapp.com",
+    projectId: "viagem-canoa-59969",
+    storageBucket: "viagem-canoa-59969.firebasestorage.app",
+    messagingSenderId: "504617664955",
+    appId: "1:504617664955:web:3c7670d20859694800049e",
+    measurementId: "G-0KVD63KSY5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const DATA_DOC = doc(db, "viagem", "dados");
+
+  // ===== SYNC UI =====
+  const syncBar = document.getElementById('syncBar');
+  const syncSpinner = document.getElementById('syncSpinner');
+  const syncText = document.getElementById('syncText');
+
+  function setSync(status, text) {
+    syncBar.className = 'sync-bar ' + status;
+    syncSpinner.style.display = status === 'syncing' ? 'block' : 'none';
+    syncText.textContent = text;
+  }
+
+  // ===== SAVE TO FIREBASE =====
+  let saveTimeout = null;
+  let isLoading = true;
+
+  function scheduleSave() {
+    if (isLoading) return;
+    if (saveTimeout) clearTimeout(saveTimeout);
+    setSync('syncing', '💾 Salvando...');
+    saveTimeout = setTimeout(async () => {
+      try {
+        const payload = {
+          tripName: document.getElementById('tripName').value,
+          people: people,
+          nextPersonId: nextPersonId,
+          categories: categories,
+          nextCatId: nextCatId,
+          indExpenses: indExpenses,
+          nextIndId: nextIndId,
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(DATA_DOC, payload);
+        setSync('saved', '✅ Salvo na nuvem');
+        setTimeout(() => setSync('', '☁️ Sincronizado'), 2000);
+      } catch (err) {
+        console.error('Erro ao salvar:', err);
+        setSync('error', '❌ Erro ao salvar');
+      }
+    }, 800);
+  }
+
+  // ===== LOAD FROM FIREBASE =====
+  async function loadFromFirebase() {
+    setSync('syncing', '☁️ Carregando dados...');
+    try {
+      const snap = await getDoc(DATA_DOC);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.tripName) document.getElementById('tripName').value = data.tripName;
+        if (data.people) people = data.people;
+        if (data.nextPersonId) nextPersonId = data.nextPersonId;
+        if (data.categories) categories = data.categories;
+        if (data.nextCatId) nextCatId = data.nextCatId;
+        if (data.indExpenses) indExpenses = data.indExpenses;
+        if (data.nextIndId) nextIndId = data.nextIndId;
+        setSync('saved', '✅ Dados carregados');
+      } else {
+        setSync('', '☁️ Novo documento — comece a editar');
+      }
+    } catch (err) {
+      console.error('Erro ao carregar:', err);
+      setSync('error', '❌ Erro ao carregar dados');
+    }
+    isLoading = false;
+    renderAll();
+  }
+
+  // ===== REAL-TIME SYNC =====
+  onSnapshot(DATA_DOC, (snap) => {
+    if (!snap.exists() || isLoading) return;
+    const data = snap.data();
+    // Only update if data is newer than local (simple check)
+    const remoteTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+    const localTime = window._lastLocalSave || 0;
+    if (remoteTime > localTime + 2000) {
+      if (data.tripName) document.getElementById('tripName').value = data.tripName;
+      if (data.people) people = data.people;
+      if (data.nextPersonId) nextPersonId = data.nextPersonId;
+      if (data.categories) categories = data.categories;
+      if (data.nextCatId) nextCatId = data.nextCatId;
+      if (data.indExpenses) indExpenses = data.indExpenses;
+      if (data.nextIndId) nextIndId = data.nextIndId;
+      renderAll();
+      setSync('saved', '🔄 Dados atualizados');
+      setTimeout(() => setSync('', '☁️ Sincronizado'), 2000);
+    }
+  });
+
+  // Make functions available globally
+  window._scheduleSave = scheduleSave;
+  window._loadFromFirebase = loadFromFirebase;
+
+  // Start loading
+  loadFromFirebase();
+</script>
+
 <script>
 // ===================== STATE =====================
 let people = [
@@ -910,7 +1080,7 @@ function renderPeople() {
     row.innerHTML = `
       <div class="person-avatar" style="background:${color}">${initials}</div>
       <input class="person-name" type="text" value="${p.name}" placeholder="Nome..."
-             oninput="people[${i}].name=this.value; calcular()">
+             oninput="people[${i}].name=this.value; calcular(); scheduleSave()">
       <button class="btn-remove" onclick="removePerson(${p.id})">✕</button>
     `;
     list.appendChild(row);
@@ -921,12 +1091,14 @@ function renderPeople() {
 function addPerson() {
   people.push({ id: nextPersonId++, name: `Pessoa ${people.length + 1}` });
   renderAll();
+  scheduleSave();
 }
 
 function removePerson(id) {
   if (people.length <= 1) return alert('A viagem precisa de pelo menos 1 pessoa!');
   people = people.filter(p => p.id !== id);
   renderAll();
+  scheduleSave();
 }
 
 // ===================== CATEGORIES =====================
@@ -950,21 +1122,21 @@ function renderCategories() {
           <span class="currency-label">R$</span>
           <input class="expense-input" type="number" min="0" step="0.01" placeholder="0,00"
                  value="${cat.value || ''}"
-                 oninput="categories[${i}].value=parseFloat(this.value)||0; calcular()"
+                 oninput="categories[${i}].value=parseFloat(this.value)||0; calcular(); scheduleSave()"
                  inputmode="decimal">
         </div>
         <div class="parcelas-wrap">
           <span class="parcelas-label">×</span>
           <input class="parcelas-input" type="number" min="1" max="60" value="${cat.parcelas}"
                  title="Parcelas"
-                 oninput="categories[${i}].parcelas=parseInt(this.value)||1; calcular()"
+                 oninput="categories[${i}].parcelas=parseInt(this.value)||1; calcular(); scheduleSave()"
                  inputmode="numeric">
         </div>
       </div>
       <div class="cat-note-panel" id="cat-note-${cat.id}">
         <div class="cat-note-inner">
           <textarea class="cat-note-input" placeholder="Adicionar observação..."
-                    oninput="updateCatNote(${cat.id}, this.value, this)">${cat.note || ''}</textarea>
+                    oninput="updateCatNote(${cat.id}, this.value, this); scheduleSave()">${cat.note || ''}</textarea>
         </div>
       </div>
     `;
@@ -985,7 +1157,6 @@ function updateCatNote(id, value, textarea) {
   const cat = categories.find(c => c.id === id);
   if (!cat) return;
   cat.note = value;
-  // Atualiza icone do botao sem re-renderizar
   const btn = textarea.closest('.expense-row').querySelector('.btn-note');
   if (btn) btn.classList.toggle('has-note', value.trim().length > 0);
 }
@@ -998,11 +1169,13 @@ function addCategory() {
   const color = COLORS[nextCatId % COLORS.length];
   categories.push({ id: nextCatId++, icon, label, color, value: 0, parcelas: 1, note: '' });
   renderAll();
+  scheduleSave();
 }
 
 function removeCategory(id) {
   categories = categories.filter(c => c.id !== id);
   renderAll();
+  scheduleSave();
 }
 
 // ===================== INDIVIDUAL EXPENSES =====================
@@ -1023,7 +1196,7 @@ function renderIndExpenses() {
         <div class="ind-row-top">
           <input class="ind-input" type="text" placeholder="Descrição do gasto..."
                  value="${exp.desc}"
-                 oninput="indExpenses[${i}].desc=this.value; calcularSaldo()">
+                 oninput="indExpenses[${i}].desc=this.value; calcularSaldo(); scheduleSave()">
           <button class="btn-remove" onclick="removeIndExpense(${exp.id})">✕</button>
         </div>
         <div class="ind-row-bottom">
@@ -1031,11 +1204,11 @@ function renderIndExpenses() {
             <span class="currency-label">R$</span>
             <input class="ind-input expense-input" type="number" min="0" step="0.01"
                    placeholder="0,00" value="${exp.value||''}"
-                   oninput="indExpenses[${i}].value=parseFloat(this.value)||0; calcularSaldo()"
+                   oninput="indExpenses[${i}].value=parseFloat(this.value)||0; calcularSaldo(); scheduleSave()"
                    inputmode="decimal">
           </div>
           <select class="select-input"
-                  onchange="indExpenses[${i}].personId=parseInt(this.value); calcularSaldo()">
+                  onchange="indExpenses[${i}].personId=parseInt(this.value); calcularSaldo(); scheduleSave()">
             ${opts}
           </select>
         </div>
@@ -1050,18 +1223,19 @@ function addIndExpense() {
   if (people.length === 0) return alert('Adicione pessoas primeiro!');
   indExpenses.push({ id: nextIndId++, desc: '', value: 0, personId: people[0].id });
   renderAll();
+  scheduleSave();
 }
 
 function removeIndExpense(id) {
   indExpenses = indExpenses.filter(e => e.id !== id);
   renderAll();
+  scheduleSave();
 }
 
 function calcularSaldo() {
   const n = people.length;
   if (n === 0) return;
 
-  // 1. Calcular saldo líquido de cada pessoa
   const saldo = {};
   people.forEach(p => saldo[p.id] = 0);
   indExpenses.forEach(exp => {
@@ -1078,7 +1252,6 @@ function calcularSaldo() {
     return;
   }
 
-  // 2. Divida bruta por gasto: debt[devedor][credor]
   const debt = {};
   people.forEach(p => { debt[p.id] = {}; people.forEach(q => debt[p.id][q.id] = 0); });
 
@@ -1093,7 +1266,6 @@ function calcularSaldo() {
     });
   });
 
-  // 3. Netear dividas bilaterais entre cada par
   const netDebt = {};
   people.forEach(p => { netDebt[p.id] = {}; people.forEach(q => netDebt[p.id][q.id] = 0); });
 
@@ -1110,7 +1282,6 @@ function calcularSaldo() {
     });
   });
 
-  // 4. Renderizar blocos retratieis por pessoa
   let html = '';
   people.forEach((p, idx) => {
     const color    = COLORS[idx % COLORS.length];
@@ -1298,6 +1469,17 @@ function renderAll() {
   renderIndExpenses();
   calcular();
 }
+
+// ===================== SAVE WRAPPER =====================
+function scheduleSave() {
+  window._lastLocalSave = Date.now();
+  if (window._scheduleSave) window._scheduleSave();
+}
+
+// Trip name auto-save
+document.getElementById('tripName').addEventListener('input', function() {
+  scheduleSave();
+});
 
 renderAll();
 </script>
