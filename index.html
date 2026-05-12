@@ -98,55 +98,49 @@
 
   .trip-name-input::placeholder { color: var(--text-muted); }
 
-  /* ===== SYNC INDICATOR ===== */
+  /* ===== SYNC TOAST ===== */
   .sync-bar {
-    display: none;
+    position: fixed;
+    bottom: calc(60px + env(safe-area-inset-bottom) + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
-    padding: 6px 12px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
+    padding: 6px 14px;
+    background: var(--text);
+    color: var(--surface);
+    border-radius: 20px;
     font-size: 0.72rem;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    transition: all 0.3s ease;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 999;
   }
 
-  .sync-bar.syncing {
-    background: rgba(58, 158, 152, 0.1);
-    color: var(--accent3);
+  .sync-bar.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 
-  .sync-bar.saved {
-    background: rgba(58, 158, 116, 0.1);
-    color: var(--success);
-  }
-
-  .sync-bar.error {
-    background: rgba(212, 96, 96, 0.1);
-    color: var(--accent2);
-  }
+  .sync-bar.syncing { background: var(--accent3); color: #fff; }
+  .sync-bar.saved   { background: var(--success);  color: #fff; }
+  .sync-bar.error   { background: var(--accent2);  color: #fff; }
 
   .sync-spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--text-light);
-    border-top-color: transparent;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     flex-shrink: 0;
   }
 
-  .sync-bar.syncing .sync-spinner {
-    border-color: var(--accent3);
-    border-top-color: transparent;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ===== SCROLL AREA ===== */
   .scroll-area {
@@ -730,7 +724,7 @@
   <!-- SYNC BAR -->
   <div class="sync-bar" id="syncBar">
     <div class="sync-spinner" id="syncSpinner" style="display:none"></div>
-    <span id="syncText">☁️ Conectando ao Firebase...</span>
+    <span id="syncText"></span>
   </div>
 
   <!-- SCROLL CONTENT -->
@@ -944,10 +938,18 @@
   const syncSpinner = document.getElementById('syncSpinner');
   const syncText = document.getElementById('syncText');
 
+  let _syncHideTimer = null;
+
   function setSync(status, text) {
-    syncBar.className = 'sync-bar ' + status;
+    if (_syncHideTimer) { clearTimeout(_syncHideTimer); _syncHideTimer = null; }
+    syncBar.className = 'sync-bar ' + status + ' visible';
     syncSpinner.style.display = status === 'syncing' ? 'block' : 'none';
     syncText.textContent = text;
+    if (status === 'saved' || status === '') {
+      _syncHideTimer = setTimeout(() => {
+        syncBar.classList.remove('visible');
+      }, status === 'saved' ? 2000 : 800);
+    }
   }
 
   // ===== SAVE TO FIREBASE =====
@@ -972,7 +974,6 @@
         };
         await setDoc(DATA_DOC, payload);
         setSync('saved', '✅ Salvo na nuvem');
-        setTimeout(() => setSync('', '☁️ Sincronizado'), 2000);
       } catch (err) {
         console.error('Erro ao salvar:', err);
         setSync('error', '❌ Erro ao salvar');
@@ -1023,7 +1024,6 @@
       if (data.nextIndId) nextIndId = data.nextIndId;
       renderAll();
       setSync('saved', '🔄 Dados atualizados');
-      setTimeout(() => setSync('', '☁️ Sincronizado'), 2000);
     }
   });
 
